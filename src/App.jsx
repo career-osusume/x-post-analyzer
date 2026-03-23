@@ -264,10 +264,7 @@ function extractUsername(raw) {
    COMPONENT
 ───────────────────────────────────────────── */
 const LOAD_STEPS = [
-  { id: "search",  label: "Xプロフィールを検索・収集" },
-  { id: "posts",   label: "実際の投稿データを取得" },
-  { id: "analyze", label: "人物像・投稿パターンを深掘り分析" },
-  { id: "parse",   label: "分析結果を整形" },
+  { id: "analyze", label: "Xプロフィールと投稿を調査・分析" },
 ];
 
 export default function App() {
@@ -300,74 +297,11 @@ export default function App() {
     setLS(LOAD_STEPS.map(s => ({ ...s, status: "idle" })));
 
     try {
-      // ── Phase 1: Web search for real profile + posts
-      setLSStatus("search", "running");
-      const searchPrompt = `
-あなたはXアカウント調査の専門家です。
-@${username} のXアカウントについて、web_searchツールを使って以下を調査してください。
-
-【調査項目】
-1. プロフィールページ（x.com/${username}）の情報
-   - 表示名、bio（自己紹介文）、フォロワー数、フォロー数
-2. 実際の投稿内容（最低5件以上）
-   - どんなテーマで投稿しているか
-   - 文体・語尾・絵文字の使い方
-   - よく使うハッシュタグ
-3. バズった投稿（いいね・RT数が多いもの）
-
-web_searchで「@${username} site:x.com」「${username} twitter」「${username} X投稿」などを検索し、できる限り実際の情報を収集してください。
-収集できた情報をすべてそのまま日本語で報告してください。推測や補完は不要です。実際に見つかった情報だけを報告してください。
-`;
-
-      const { text: rawProfile, sources: profileSources } = await claudeWithSearch(
-        `@${username} のXプロフィールと投稿内容を調査してください。`,
-        searchPrompt,
-        2000
-      );
-      setLSStatus("search", "done");
-      setLSStatus("posts", "running");
-
-      // ── Phase 2: Deeper post search
-      const { text: rawPosts, sources: postSources } = await claudeWithSearch(
-        `@${username} の最近の投稿・バズった投稿をさらに詳しく調査してください。`,
-        `あなたはX投稿の分析専門家です。
-前の調査で得た情報に加え、web_searchで「${username} X 投稿」「${username} ツイート」「${username} バズ」などをさらに検索し、
-実際の投稿例を5件以上収集してください。
-各投稿について：投稿文・いいね数（不明なら不明と記載）・テーマを整理して報告してください。
-
-前回の調査結果：
-${rawProfile}
-`,
-        2000
-      );
-      setLSStatus("posts", "done");
       setLSStatus("analyze", "running");
 
-      const allSources = [...new Set([...profileSources, ...postSources])].slice(0, 8);
-      setDS(allSources);
-
-      // ── Phase 3: Deep analysis based on REAL data
-      const combined = `
-【プロフィール調査結果】
-${rawProfile}
-
-【投稿調査結果】
-${rawPosts}
-`;
-
       const analysisResult = await claudePlain(
-        [{ role: "user", content: `上記の実際の調査結果を基に、@${username} の詳細分析を行ってください。` }],
-        `あなたはXアカウント分析の最上位エキスパートです。
-以下は @${username} についてweb検索で収集した実際のデータです。
-このデータを最大限に活用し、実際の情報に基づいた正確な分析を行ってください。
-
-【重要】
-- 調査で判明した情報は事実として使う
-- 判明しなかった情報は「不明」とせず、判明した情報から合理的に推測し「（推測）」と付記する
-- AIによる推測・補完で情報を水増しすることは避け、実データに忠実に分析する
-
-【収集済み実データ】
-${combined}
+        [{ role: "user", content: `@${username} のXプロフィールと投稿を調査・分析してください。` }],
+        `Gemini の google検索機能を使って @${username} のXプロフィールと投稿を調査し分析してください。
 
 以下のJSON形式のみで返答してください。前置き・後置き・コードブロック記号は一切不要です。
 
@@ -407,7 +341,6 @@ ${combined}
         2500
       );
       setLSStatus("analyze", "done");
-      setLSStatus("parse", "running");
 
       let parsed;
       try {
@@ -423,7 +356,6 @@ ${combined}
         }
       }
 
-      setLSStatus("parse", "done");
       setProfile({ username, displayName: parsed.displayName });
       setAna(parsed);
       setStep(2);
