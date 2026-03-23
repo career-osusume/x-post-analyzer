@@ -30,6 +30,7 @@ export default async function handler(req, res) {
     generationConfig: {
       maxOutputTokens: max_tokens || 2000,
       temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
     }
   };
 
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
   // Anthropic形式に変換して返す
   const candidate = data.candidates?.[0];
   const textContent = candidate?.content?.parts
-    ?.filter(p => p.text)
+    ?.filter(p => p.text !== undefined && !p.thought)
     ?.map(p => p.text)
     ?.join("") || "";
 
