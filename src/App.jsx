@@ -307,10 +307,12 @@ export default function App() {
         [{ role: "user", content: `以下のXプロフィール情報と投稿を分析してください。\n@${username}\n【bio】${bioText}\n【投稿】${postsText}\n【ハッシュタグ】${hashtagText}` }],
         `Gemini の google検索機能を使って @${username} のXプロフィールと投稿を調査し分析してください。
 
+【重要】displayName は必ずユーザーが入力したbioや投稿から読み取れる実際の名前を使用してください。URLのユーザー名（@以降）をそのまま使わないでください。bioに名前が含まれている場合はその名前を使用してください。
+
 以下のJSON形式のみで返答してください。前置き・後置き・コードブロック記号は一切不要です。
 
 {
-  "displayName": "実際の表示名",
+  "displayName": "実際の表示名（bioや投稿から読み取れる名前。@以降のユーザー名は使用しないこと）",
   "jobTitle": "実際のプロフィールから判明した役職・職業（不明な場合は推測と明記）",
   "companyType": "所属組織の種別・規模（判明した情報 + 必要なら推測）",
   "industry": "業界（実際の投稿内容から判断）",
@@ -360,7 +362,8 @@ export default function App() {
         }
       }
 
-      setProfile({ username, displayName: parsed.displayName });
+      const displayNameFromBio = bioText.split(/[\n。、]/)[0].trim() || username;
+      setProfile({ username, displayName: parsed.displayName || displayNameFromBio });
       setAna(parsed);
       setStep(2);
     } catch (e) {
