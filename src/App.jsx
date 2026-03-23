@@ -269,6 +269,9 @@ const LOAD_STEPS = [
 
 export default function App() {
   const [url, setUrl]           = useState("");
+  const [bioText, setBio]       = useState("");
+  const [postsText, setPosts2]  = useState("");
+  const [hashtagText, setHash]  = useState("");
   const [step, setStep]         = useState(1);
   const [loadSteps, setLS]      = useState([]);   // { id, status: idle|running|done }
   const [loading, setLoading]   = useState(false);
@@ -289,9 +292,10 @@ export default function App() {
     setLS(prev => prev.map(s => s.id === id ? { ...s, status } : s));
   }
 
-  /* ── STEP 1: ANALYZE with real web search ── */
+  /* ── STEP 1: ANALYZE ── */
   async function analyzeProfile() {
     if (!username) { setError("有効なXのプロフィールURLまたはユーザー名を入力してください"); return; }
+    if (!bioText.trim() && !postsText.trim()) { setError("プロフィールbioまたは投稿内容を入力してください"); return; }
     setError(""); setLoading(true);
     setProfile(null); setAna(null); setPosts([]); setDirs([]); setDS([]);
     setLS(LOAD_STEPS.map(s => ({ ...s, status: "idle" })));
@@ -300,7 +304,7 @@ export default function App() {
       setLSStatus("analyze", "running");
 
       const analysisResult = await claudePlain(
-        [{ role: "user", content: `@${username} のXプロフィールと投稿を調査・分析してください。` }],
+        [{ role: "user", content: `以下のXプロフィール情報と投稿を分析してください。\n@${username}\n【bio】${bioText}\n【投稿】${postsText}\n【ハッシュタグ】${hashtagText}` }],
         `Gemini の google検索機能を使って @${username} のXプロフィールと投稿を調査し分析してください。
 
 以下のJSON形式のみで返答してください。前置き・後置き・コードブロック記号は一切不要です。
@@ -429,7 +433,7 @@ JSONのみ返答してください。
     });
   }
   function resetStep2() { setPosts([]); setStep(2); setDirs([]); }
-  function resetAll()   { setStep(1); setUrl(""); setProfile(null); setAna(null); setPosts([]); setDirs([]); setError(""); setDS([]); setLS([]); }
+  function resetAll()   { setStep(1); setUrl(""); setBio(""); setPosts2(""); setHash(""); setProfile(null); setAna(null); setPosts([]); setDirs([]); setError(""); setDS([]); setLS([]); }
 
   const isLoading = loading || generating;
 
@@ -460,18 +464,65 @@ JSONのみ返答してください。
         {/* STEP 1: INPUT */}
         <div className="card">
           <div className="card-ey">STEP 1</div>
-          <div className="card-title">プロフィールURLを入力</div>
+          <div className="card-title">プロフィール情報を入力</div>
           <div className="input-row">
             <input
               className="txt-in"
               placeholder="https://x.com/username または @username"
               value={url}
               onChange={e => { setUrl(e.target.value); setError(""); }}
-              onKeyDown={e => e.key === "Enter" && !isLoading && analyzeProfile()}
               disabled={isLoading}
             />
-            <button className="btn btn-p" onClick={analyzeProfile} disabled={isLoading || !url.trim()}>
-              分析する
+            {url.trim() && (
+              <button
+                className="btn btn-g"
+                onClick={() => window.open(url.startsWith("http") ? url : `https://x.com/${url.replace(/^@/,"")}`, "_blank")}
+                disabled={isLoading}
+              >
+                Xを開く
+              </button>
+            )}
+          </div>
+
+          <div style={{marginTop:16, display:"flex", flexDirection:"column", gap:12}}>
+            <div>
+              <div style={{fontSize:12, color:"var(--text-sub)", marginBottom:6, fontFamily:"'DM Mono',monospace", letterSpacing:"0.1em"}}>プロフィールbio（自己紹介文）</div>
+              <textarea
+                className="txt-in"
+                style={{width:"100%", minHeight:80, resize:"vertical", fontFamily:"inherit", lineHeight:1.7}}
+                placeholder="bioをここに貼り付けてください"
+                value={bioText}
+                onChange={e => { setBio(e.target.value); setError(""); }}
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <div style={{fontSize:12, color:"var(--text-sub)", marginBottom:6, fontFamily:"'DM Mono',monospace", letterSpacing:"0.1em"}}>固定ツイート or 最近の投稿5件以上</div>
+              <textarea
+                className="txt-in"
+                style={{width:"100%", minHeight:160, resize:"vertical", fontFamily:"inherit", lineHeight:1.7}}
+                placeholder="投稿内容をここに貼り付けてください（5件以上推奨）"
+                value={postsText}
+                onChange={e => { setPosts2(e.target.value); setError(""); }}
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <div style={{fontSize:12, color:"var(--text-sub)", marginBottom:6, fontFamily:"'DM Mono',monospace", letterSpacing:"0.1em"}}>よく使うハッシュタグ（任意）</div>
+              <textarea
+                className="txt-in"
+                style={{width:"100%", minHeight:60, resize:"vertical", fontFamily:"inherit", lineHeight:1.7}}
+                placeholder="#マーケティング #スタートアップ など"
+                value={hashtagText}
+                onChange={e => { setHash(e.target.value); setError(""); }}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <div style={{marginTop:16}}>
+            <button className="btn btn-full" onClick={analyzeProfile} disabled={isLoading || (!bioText.trim() && !postsText.trim())}>
+              {loading ? "分析中..." : "分析する"}
             </button>
           </div>
 
