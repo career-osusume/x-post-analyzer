@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
   };
 
-  const modelName = "gemini-2.0-flash";
+  const modelName = "gemini-2.0-flash-001";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
